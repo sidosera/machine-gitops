@@ -48,25 +48,34 @@ fi
 log "Applying compose"
 docker compose up -d --remove-orphans
 
-# Minimal health probe via Traefik on localhost.
-if command -v curl >/dev/null 2>&1; then
-  if curl --max-time 10 -fsS -H "Host: $DOMAIN" "http://127.0.0.1/" >/dev/null; then
-    log "Health probe OK for $DOMAIN"
+# Health probe with retries — Traefik needs a moment to register routes after start.
+PROBE_OK=0
+for i in 1 2 3 4 5; do
+  if curl --max-time 10 -fsS -H "Host: $DOMAIN" "http://127.0.0.1/" >/dev/null 2>&1; then
+    PROBE_OK=1
+    break
+  fi
+  log "Health probe attempt $i/5 failed, retrying in 3s..."
+  sleep 3
+done
+
+if [ "$PROBE_OK" = "1" ]; then
+  log "Health probe OK for $DOMAIN"
+else
+  log "Health probe FAILED after 5 attempts; attempting rollback"
+  if [ -f "$LAST_GOOD" ]; then
+    GOOD_SHA="$(cat "$LAST_GOOD")"
+    log "Rolling back to $GOOD_SHA"
+    git reset --hard "$GOOD_SHA"
+    docker compose config >/dev/null
+    docker compose pull
+    docker compose up -d --remove-orphans
+    sleep 5
+    curl --max-time 10 -fsS -H "Host: $DOMAIN" "http://127.0.0.1/" >/dev/null || die "Rollback failed health probe"
+    log "Rollback succeeded"
+    exit 1
   else
-    log "Health probe FAILED; attempting rollback"
-    if [ -f "$LAST_GOOD" ]; then
-      GOOD_SHA="$(cat "$LAST_GOOD")"
-      log "Rolling back to $GOOD_SHA"
-      git reset --hard "$GOOD_SHA"
-      docker compose config >/dev/null
-      docker compose pull
-      docker compose up -d --remove-orphans
-      curl --max-time 10 -fsS -H "Host: $DOMAIN" "http://127.0.0.1/" >/dev/null || die "Rollback failed health probe"
-      log "Rollback succeeded"
-      exit 1
-    else
-      die "No last_good_sha recorded; cannot rollback"
-    fi
+    die "No last_good_sha recorded; cannot rollback"
   fi
 fi
 
