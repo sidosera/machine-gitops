@@ -1,0 +1,9 @@
+[Unit]
+Description=Hackamonth GitOps Deploy (pull git + docker compose)
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/srv/hackamonth/deploy/deploy.sh
