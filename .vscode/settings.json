@@ -3,6 +3,8 @@
         "certresolver",
         "certificatesresolvers",
         "hackamonth",
+        "Nosniff",
+        "userland",
         "letsencrypt",
         "redirections",
         "tlschallenge",

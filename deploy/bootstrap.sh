@@ -30,6 +30,8 @@ BRANCH="${BRANCH:-main}"
 AUTO_FIREWALL="${AUTO_FIREWALL:-1}"
 AUTO_FAIL2BAN="${AUTO_FAIL2BAN:-1}"
 AUTO_UNATTENDED_UPGRADES="${AUTO_UNATTENDED_UPGRADES:-1}"
+AUTO_SSH_HARDEN="${AUTO_SSH_HARDEN:-1}"
+AUTO_DOCKER_HARDEN="${AUTO_DOCKER_HARDEN:-1}"
 
 PURGE="${PURGE:-0}"
 
@@ -97,6 +99,33 @@ if [ "$AUTO_UNATTENDED_UPGRADES" = "1" ]; then
   log "Enabling unattended security upgrades"
   sudo apt-get install -y unattended-upgrades
   sudo dpkg-reconfigure -f noninteractive unattended-upgrades >/dev/null || true
+fi
+
+if [ "$AUTO_SSH_HARDEN" = "1" ]; then
+  log "Hardening SSH (disabling password auth, X11; MaxAuthTries=3)"
+  sudo tee /etc/ssh/sshd_config.d/99-hackamonth.conf >/dev/null <<'EOF'
+# Applied by hackamonth bootstrap — requires SSH key to be pre-loaded
+PasswordAuthentication no
+X11Forwarding no
+MaxAuthTries 3
+EOF
+  sudo systemctl reload ssh
+fi
+
+if [ "$AUTO_DOCKER_HARDEN" = "1" ]; then
+  log "Writing Docker daemon hardening config"
+  if [ ! -f /etc/docker/daemon.json ]; then
+    sudo tee /etc/docker/daemon.json >/dev/null <<'EOF'
+{
+  "live-restore": true,
+  "no-new-privileges": true,
+  "userland-proxy": false,
+  "log-driver": "local",
+  "log-opts": { "max-size": "10m", "max-file": "3" }
+}
+EOF
+    sudo systemctl reload docker
+  fi
 fi
 
 
