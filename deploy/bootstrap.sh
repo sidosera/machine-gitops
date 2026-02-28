@@ -151,8 +151,9 @@ sudo test -f "$INSTALL_DIR/deploy/systemd/hackamonth-deploy.timer" || die "Missi
 
 # Install deploy runner into standard admin bin dir
 
-log "Installing deploy runner to $BIN_PATH (root-owned)"
-sudo install -o root -g root -m 0755 "$INSTALL_DIR/deploy/deploy.sh" "$BIN_PATH"
+log "Symlinking deploy runner $BIN_PATH -> $INSTALL_DIR/deploy/deploy.sh"
+sudo chmod 0755 "$INSTALL_DIR/deploy/deploy.sh"
+sudo ln -sf "$INSTALL_DIR/deploy/deploy.sh" "$BIN_PATH"
 
 
 # Write runtime config
