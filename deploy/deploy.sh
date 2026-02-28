@@ -48,10 +48,18 @@ fi
 log "Applying compose"
 docker compose up -d --remove-orphans
 
-# Health probe with retries — Traefik needs a moment to register routes after start.
+# Health probe: accept 2xx (plain HTTP) or 3xx (HTTPS redirect) as healthy.
+# Traefik needs a moment to register routes after start, so retry up to 5 times.
+probe() {
+  local code
+  code=$(curl --max-time 10 -s -o /dev/null -w "%{http_code}" -H "Host: $DOMAIN" "http://127.0.0.1/")
+  case "$code" in 2*|3*) return 0 ;; esac
+  return 1
+}
+
 PROBE_OK=0
 for i in 1 2 3 4 5; do
-  if curl --max-time 10 -fsS -H "Host: $DOMAIN" "http://127.0.0.1/" >/dev/null 2>&1; then
+  if probe; then
     PROBE_OK=1
     break
   fi
@@ -71,7 +79,7 @@ else
     docker compose pull
     docker compose up -d --remove-orphans
     sleep 5
-    curl --max-time 10 -fsS -H "Host: $DOMAIN" "http://127.0.0.1/" >/dev/null || die "Rollback failed health probe"
+    probe || die "Rollback failed health probe"
     log "Rollback succeeded"
     exit 1
   else

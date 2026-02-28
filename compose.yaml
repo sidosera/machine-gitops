@@ -6,10 +6,19 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.web.http.redirections.entrypoint.permanent=true
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.tlschallenge=true
+      - --certificatesresolvers.le.acme.email=admin@hackamonth.io
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
     restart: unless-stopped
 
   site:
@@ -17,6 +26,11 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.site.rule=Host(`hackamonth.io`) || HostRegexp(`^[a-z0-9-]+\.hackamonth\.io$`)
-      - traefik.http.routers.site.entrypoints=web
+      - traefik.http.routers.site.entrypoints=websecure
+      - traefik.http.routers.site.tls=true
+      - traefik.http.routers.site.tls.certresolver=le
       - traefik.http.services.site.loadbalancer.server.port=80
     restart: unless-stopped
+
+volumes:
+  letsencrypt:

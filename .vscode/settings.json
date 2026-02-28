@@ -1,5 +1,11 @@
 {
     "cSpell.words": [
-        "hackamonth"
+        "certresolver",
+        "certificatesresolvers",
+        "hackamonth",
+        "letsencrypt",
+        "redirections",
+        "tlschallenge",
+        "websecure"
     ]
 }
