@@ -1,10 +1,11 @@
 [Unit]
-Description=Run Hackamonth GitOps deploy periodically
+Description=GitOps Timer
 
 [Timer]
 OnBootSec=30
 OnUnitActiveSec=60
 Unit=hackamonth-deploy.service
+Persistent=true
 
 [Install]
 WantedBy=timers.target
