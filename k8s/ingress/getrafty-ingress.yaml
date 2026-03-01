@@ -10,10 +10,10 @@ metadata:
 spec:
   tls:
     - hosts:
-        - academy.hackamonth.io
-      secretName: academy-hackamonth-io-tls
+        - book.hackamonth.io
+      secretName: book-hackamonth-io-tls
   rules:
-    - host: academy.hackamonth.io
+    - host: book.hackamonth.io
       http:
         paths:
           - path: /
