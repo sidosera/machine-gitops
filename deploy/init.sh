@@ -6,7 +6,6 @@ die() { log "ERROR: $*" >&2; exit 1; }
 
 REPO_URL="${REPO_URL:-https://github.com/sidosera/machine-gitops.git}"
 BRANCH="${BRANCH:-main}"
-ARGOCD_VERSION="${ARGOCD_VERSION:-stable}"
 
 # --- packages ---
 
@@ -42,11 +41,19 @@ fi
 if ! k3s kubectl get ns argocd >/dev/null 2>&1; then
   log "Installing ArgoCD"
   k3s kubectl create namespace argocd
-  k3s kubectl apply -n argocd -f "https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml"
+  k3s kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
   k3s kubectl wait --for=condition=Available deployment --all -n argocd --timeout=180s
 fi
 
-# --- argocd app pointing at this repo ---
+# --- argocd image updater ---
+
+if ! k3s kubectl get deployment argocd-image-updater -n argocd >/dev/null 2>&1; then
+  log "Installing ArgoCD Image Updater"
+  k3s kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj-labs/argocd-image-updater/stable/manifests/install.yaml
+  k3s kubectl wait --for=condition=Available deployment/argocd-image-updater -n argocd --timeout=120s
+fi
+
+# --- argocd app ---
 
 k3s kubectl apply -f - <<EOF
 apiVersion: argoproj.io/v1alpha1
@@ -54,6 +61,10 @@ kind: Application
 metadata:
   name: hackamonth
   namespace: argocd
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: site=image-hub.infra.hackamonth.io/getrafty-org/site
+    argocd-image-updater.argoproj.io/site.update-strategy: latest-version
+    argocd-image-updater.argoproj.io/write-back-method: git
 spec:
   project: default
   source:
@@ -92,4 +103,3 @@ sudo systemctl reload ssh
 log "Done."
 log "  ArgoCD UI: k3s kubectl port-forward svc/argocd-server -n argocd 8080:443"
 log "  Password : k3s kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d"
-log "  Apps     : k3s kubectl get applications -n argocd"

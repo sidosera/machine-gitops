@@ -5,6 +5,10 @@ metadata:
   namespace: hackamonth
   labels:
     app: getrafty
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: site=image-hub.infra.hackamonth.io/getrafty-org/site
+    argocd-image-updater.argoproj.io/site.update-strategy: latest-version
+    argocd-image-updater.argoproj.io/write-back-method: git
 spec:
   replicas: 1
   selector:
@@ -17,7 +21,7 @@ spec:
     spec:
       containers:
         - name: getrafty
-          image: ghcr.io/getrafty-org/site:latest  # pinned by CI
+          image: image-hub.infra.hackamonth.io/getrafty-org/site:latest
           ports:
             - containerPort: 80
           resources:
