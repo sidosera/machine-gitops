@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-log() { printf '%s %s\n' "[hackamonth-bootstrap]" "$*"; }
-die() { printf '%s %s\n' "[hackamonth-bootstrap][ERROR]" "$*" >&2; exit 1; }
+log() { printf '%s %s\n' "[hackamonth-init]" "$*"; }
+die() { printf '%s %s\n' "[hackamonth-init][ERROR]" "$*" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || die "Missing command: $1"; }
 
 need bash
