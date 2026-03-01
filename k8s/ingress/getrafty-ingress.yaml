@@ -10,21 +10,10 @@ metadata:
 spec:
   tls:
     - hosts:
-        - getrafty.org
-        - www.getrafty.org
-      secretName: getrafty-org-tls
+        - academy.hackamonth.io
+      secretName: academy-hackamonth-io-tls
   rules:
-    - host: getrafty.org
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: getrafty
-                port:
-                  number: 80
-    - host: www.getrafty.org
+    - host: academy.hackamonth.io
       http:
         paths:
           - path: /
