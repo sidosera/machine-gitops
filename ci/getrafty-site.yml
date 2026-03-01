@@ -10,7 +10,6 @@
 #      Save it as secret GITOPS_PAT in getrafty-org/site repo.
 #   3. Make the ghcr.io/getrafty-org/site package public:
 #      GitHub → getrafty-org → Packages → site → Package settings → Public
-#      (so the server can pull without auth)
 
 name: Deploy
 
@@ -71,10 +70,9 @@ jobs:
           repository: sidosera/machine-gitops
           token: ${{ secrets.GITOPS_PAT }}
 
-      - name: Pin image tag in k8s manifest
+      - name: Pin image tag
         run: |
           sed -i "s|image: ghcr.io/getrafty-org/site:.*|image: ${{ needs.build.outputs.tag }}|" k8s/base/getrafty.yaml
-          grep "image:" k8s/base/getrafty.yaml
 
       - name: Commit & push
         run: |

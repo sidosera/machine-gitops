@@ -6,12 +6,7 @@ die() { log "ERROR: $*" >&2; exit 1; }
 
 REPO_URL="${REPO_URL:-https://github.com/sidosera/machine-gitops.git}"
 BRANCH="${BRANCH:-main}"
-DOMAIN="${DOMAIN:-hackamonth.io}"
-INSTALL_DIR="${INSTALL_DIR:-/srv/hackamonth}"
-STATE_DIR="${STATE_DIR:-/var/lib/hackamonth}"
-CFG_DIR="${CFG_DIR:-/etc/hackamonth}"
-BIN_PATH="${BIN_PATH:-/usr/local/sbin/hackamonth-deploy}"
-PURGE="${PURGE:-0}"
+ARGOCD_VERSION="${ARGOCD_VERSION:-stable}"
 
 # --- packages ---
 
@@ -42,6 +37,41 @@ if ! k3s kubectl get ns cert-manager >/dev/null 2>&1; then
   k3s kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=120s
 fi
 
+# --- argocd ---
+
+if ! k3s kubectl get ns argocd >/dev/null 2>&1; then
+  log "Installing ArgoCD"
+  k3s kubectl create namespace argocd
+  k3s kubectl apply -n argocd -f "https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml"
+  k3s kubectl wait --for=condition=Available deployment --all -n argocd --timeout=180s
+fi
+
+# --- argocd app pointing at this repo ---
+
+k3s kubectl apply -f - <<EOF
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hackamonth
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: ${REPO_URL}
+    targetRevision: ${BRANCH}
+    path: k8s
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+EOF
+
 # --- harden ---
 
 sudo ufw allow OpenSSH >/dev/null
@@ -59,47 +89,7 @@ MaxAuthTries 3
 EOF
 sudo systemctl reload ssh
 
-# --- repo ---
-
-sudo mkdir -p "$INSTALL_DIR" "$CFG_DIR" "$STATE_DIR"
-
-if [ "$PURGE" = "1" ]; then
-  log "Purging"
-  k3s kubectl delete namespace hackamonth --ignore-not-found || true
-  sudo rm -rf "${INSTALL_DIR:?}/"*
-fi
-
-if [ -d "$INSTALL_DIR/.git" ]; then
-  sudo git -C "$INSTALL_DIR" remote set-url origin "$REPO_URL"
-  sudo git -C "$INSTALL_DIR" fetch --prune origin
-else
-  sudo git clone "$REPO_URL" "$INSTALL_DIR"
-fi
-sudo git -C "$INSTALL_DIR" reset --hard "origin/$BRANCH"
-
-# --- wiring ---
-
-sudo chmod 0755 "$INSTALL_DIR/deploy/deploy.sh"
-sudo ln -sf "$INSTALL_DIR/deploy/deploy.sh" "$BIN_PATH"
-
-sudo tee "$CFG_DIR/deploy.env" >/dev/null <<EOF
-INSTALL_DIR=$INSTALL_DIR
-STATE_DIR=$STATE_DIR
-BRANCH=$BRANCH
-DOMAIN=$DOMAIN
-KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-EOF
-sudo ln -sf "$CFG_DIR/deploy.env" /etc/default/hackamonth-deploy
-
-sudo systemctl stop hackamonth-deploy.timer 2>/dev/null || true
-sudo rm -f /etc/systemd/system/hackamonth-deploy.{service,timer}
-sudo ln -s "$INSTALL_DIR/deploy/systemd/hackamonth-deploy.service" /etc/systemd/system/
-sudo ln -s "$INSTALL_DIR/deploy/systemd/hackamonth-deploy.timer"   /etc/systemd/system/
-sudo systemctl daemon-reload
-
-# --- go ---
-
-sudo systemctl start hackamonth-deploy.service
-sudo systemctl enable --now hackamonth-deploy.timer
-
-log "Done. k3s kubectl get all -n hackamonth"
+log "Done."
+log "  ArgoCD UI: k3s kubectl port-forward svc/argocd-server -n argocd 8080:443"
+log "  Password : k3s kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d"
+log "  Apps     : k3s kubectl get applications -n argocd"
