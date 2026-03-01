@@ -6,7 +6,7 @@ metadata:
   labels:
     app: getrafty
   annotations:
-    argocd-image-updater.argoproj.io/image-list: site=image-hub.infra.hackamonth.io/getrafty-org/site
+    argocd-image-updater.argoproj.io/image-list: site=hub.hackamonth.io/getrafty-org/site
     argocd-image-updater.argoproj.io/site.update-strategy: latest-version
     argocd-image-updater.argoproj.io/write-back-method: git
 spec:
@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: getrafty
-          image: image-hub.infra.hackamonth.io/getrafty-org/site:latest
+          image: hub.hackamonth.io/getrafty-org/site:latest
           ports:
             - containerPort: 80
           resources:

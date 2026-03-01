@@ -10,10 +10,10 @@ metadata:
 spec:
   tls:
     - hosts:
-        - image-hub.infra.hackamonth.io
+        - hub.hackamonth.io
       secretName: image-hub-tls
   rules:
-    - host: image-hub.infra.hackamonth.io
+    - host: hub.hackamonth.io
       http:
         paths:
           - path: /

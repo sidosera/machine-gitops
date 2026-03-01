@@ -62,7 +62,7 @@ metadata:
   name: hackamonth
   namespace: argocd
   annotations:
-    argocd-image-updater.argoproj.io/image-list: site=image-hub.infra.hackamonth.io/getrafty-org/site
+    argocd-image-updater.argoproj.io/image-list: site=hub.hackamonth.io/getrafty-org/site
     argocd-image-updater.argoproj.io/site.update-strategy: latest-version
     argocd-image-updater.argoproj.io/write-back-method: git
 spec:
