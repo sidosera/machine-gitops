@@ -19,6 +19,8 @@ spec:
       labels:
         app: getrafty
     spec:
+      imagePullSecrets:
+        - name: registry-pull
       containers:
         - name: getrafty
           image: hub.hackamonth.io/getrafty-org/site:latest
