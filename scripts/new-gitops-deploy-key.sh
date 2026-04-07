@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Create a dedicated SSH key pair for GitOps CI (never use your personal ~/.ssh/id_*).
+# Create a dedicated SSH key pair for GitOps CI / act only (never your primary ~/.ssh/id_*).
+# For interactive ssh + hm-playbook from your laptop, use a separate "Hackamonth" key; see README.
 #
 #   ./scripts/new-gitops-deploy-key.sh
 #   ./scripts/new-gitops-deploy-key.sh ~/.ssh/hm-gitops-deploy

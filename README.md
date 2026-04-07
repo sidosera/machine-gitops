@@ -13,6 +13,34 @@ brew install ansible
 
 - SSH to the target as **`secrets.deploy.ssh_user`** in **`local-env.yaml`**. Ansible uses **`become`** (sudo): either **passwordless sudo** for that user, or run **`./hm-playbook.sh --ask-become-pass`** (`-K`) and enter the sudo password when prompted.
 
+## SSH keys (keep them separate)
+
+Use **different keys** for day‑to‑day identity vs this VPS vs automation. Do not reuse your **primary** `~/.ssh/id_ed25519` (or default agent identity) for Hackamonth if you can avoid it.
+
+| Key | Role | Where the private half lives |
+|-----|------|------------------------------|
+| **Primary** | GitHub, work machines, personal servers | Your laptop only; **never** in this repo’s GitHub Actions secrets |
+| **Hackamonth / VPS** | Interactive **`ssh`**, **`./hm-playbook.sh`** from your laptop | e.g. **`~/.ssh/hackamonth`** — pubkey in **`authorized_keys`** for **`secrets.deploy.ssh_user`** |
+| **GitOps deploy** | GitHub Actions + **`act`** only | **`~/.ssh/hm-gitops-deploy`** — private key only in **`GITOPS_DEPLOY_KEY`**; see **`scripts/new-gitops-deploy-key.sh`** |
+
+The VPS can have **both** public keys in **`~/.ssh/authorized_keys`** (two lines): one for you, one for CI.
+
+**Laptop SSH config** (recommended so Ansible picks the right key without `--private-key`):
+
+```sshconfig
+Host hackamonth.io
+  User sidosera
+  IdentityFile ~/.ssh/hackamonth
+  IdentitiesOnly yes
+```
+
+Adjust **`Host`** / **`User`** to match **`secrets.deploy.ansible_host`** and **`secrets.deploy.ssh_user`**. Generate the Hackamonth key once:
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/hackamonth -C "hackamonth-vps" -N ""
+ssh-copy-id -i ~/.ssh/hackamonth.pub -o IdentityFile=~/.ssh/hackamonth YOUR_USER@YOUR_HOST
+```
+
 ## Clone
 
 ```bash
@@ -50,7 +78,7 @@ Play 1 **`include_vars`** + **`add_host`** group **`hm`** with **`{{ secrets.dep
 ./hm-playbook.sh -e hm_action=teardown -e hm_teardown_uninstall_k3s=true  # also k3s-uninstall.sh
 ```
 
-Use your normal SSH setup from the laptop (agent or **`ssh -i …`**). Do not put your personal private key in GitHub. If sudo is not passwordless:
+From the laptop, use the **Hackamonth key** (SSH config above) or **`./hm-playbook.sh --private-key ~/.ssh/hackamonth …`**. See **SSH keys (keep them separate)**. If sudo is not passwordless:
 
 ```bash
 ./hm-playbook.sh --ask-become-pass

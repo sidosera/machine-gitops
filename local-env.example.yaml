@@ -1,4 +1,5 @@
 # Copy to local-env.yaml (gitignored). Do not commit.
+# Use a dedicated SSH key for this VPS (not your primary ~/.ssh/id_*); see README "SSH keys".
 
 secrets:
   deploy:
