@@ -1,27 +1,38 @@
 #!/usr/bin/env bash
 # Run the same GitHub Actions job locally with act (Docker).
-# Requires: Docker, act, ./local-env.yaml, and a dedicated deploy key file path.
+# Uses the same dedicated hm-gitops SSH key as GitHub Actions (not your primary ~/.ssh/id_*).
 #
-#   GITOPS_DEPLOY_KEY_FILE=~/.ssh/hm-gitops-deploy ./scripts/run-act-gitops.sh
-#   GITOPS_DEPLOY_KEY_FILE=~/.ssh/hm-gitops-deploy ./scripts/run-act-gitops.sh --dryrun
+#   ./scripts/run-act-gitops.sh
+#   GITOPS_DEPLOY_KEY_FILE=~/.ssh/other ./scripts/run-act-gitops.sh --dryrun
 #
-# Never point this at your personal ~/.ssh/id_ed25519 — use scripts/new-gitops-deploy-key.sh.
+# Default key path: ~/.ssh/hm-gitops, or ~/.ssh/hm-gitops-deploy if you created an older key there.
 #
-# Optional: GITOPS_BECOME_PASSWORD for sudo on the VPS (same as GitHub secret), or NOPASSWD.
+# Optional: GITOPS_BECOME_PASSWORD (or NOPASSWD on the VPS).
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-KEY_FILE="${GITOPS_DEPLOY_KEY_FILE:-}"
-if [[ -z "$KEY_FILE" ]]; then
-  echo "Set GITOPS_DEPLOY_KEY_FILE to the dedicated GitOps deploy private key (not your personal SSH key)." >&2
-  echo "Example: GITOPS_DEPLOY_KEY_FILE=\$HOME/.ssh/hm-gitops-deploy ./scripts/run-act-gitops.sh" >&2
-  echo "Create a key: ./scripts/new-gitops-deploy-key.sh" >&2
-  exit 1
-fi
+resolve_key_file() {
+  if [[ -n "${GITOPS_DEPLOY_KEY_FILE:-}" ]]; then
+    printf '%s' "$GITOPS_DEPLOY_KEY_FILE"
+    return
+  fi
+  if [[ -f "$HOME/.ssh/hm-gitops" ]]; then
+    printf '%s' "$HOME/.ssh/hm-gitops"
+    return
+  fi
+  if [[ -f "$HOME/.ssh/hm-gitops-deploy" ]]; then
+    printf '%s' "$HOME/.ssh/hm-gitops-deploy"
+    return
+  fi
+  printf '%s' "$HOME/.ssh/hm-gitops"
+}
+
+KEY_FILE="$(resolve_key_file)"
 if [[ ! -f "$KEY_FILE" ]]; then
-  echo "Missing deploy key file: $KEY_FILE" >&2
+  echo "Missing hm-gitops SSH private key: $KEY_FILE" >&2
+  echo "Create one (separate from your primary ~/.ssh/id_*): ./scripts/new-hm-gitops-key.sh" >&2
   exit 1
 fi
 if [[ ! -f "$ROOT/local-env.yaml" ]]; then

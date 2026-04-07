@@ -13,33 +13,32 @@ brew install ansible
 
 - SSH to the target as **`secrets.deploy.ssh_user`** in **`local-env.yaml`**. Ansible uses **`become`** (sudo): either **passwordless sudo** for that user, or run **`./hm-playbook.sh --ask-become-pass`** (`-K`) and enter the sudo password when prompted.
 
-## SSH keys (keep them separate)
+## SSH keys (two keys total)
 
-Use **different keys** for day‑to‑day identity vs this VPS vs automation. Do not reuse your **primary** `~/.ssh/id_ed25519` (or default agent identity) for Hackamonth if you can avoid it.
+Keep **one SSH identity for everything else** (work, personal servers, default GitHub) and **one key only for this Hackamonth VPS + this repo’s automation**. Do not use your primary **`~/.ssh/id_ed25519`** (or whatever you use for other private infra) for HM.
 
-| Key | Role | Where the private half lives |
-|-----|------|------------------------------|
-| **Primary** | GitHub, work machines, personal servers | Your laptop only; **never** in this repo’s GitHub Actions secrets |
-| **Hackamonth / VPS** | Interactive **`ssh`**, **`./hm-playbook.sh`** from your laptop | e.g. **`~/.ssh/hackamonth`** — pubkey in **`authorized_keys`** for **`secrets.deploy.ssh_user`** |
-| **GitOps deploy** | GitHub Actions + **`act`** only | **`~/.ssh/hm-gitops-deploy`** — private key only in **`GITOPS_DEPLOY_KEY`**; see **`scripts/new-gitops-deploy-key.sh`** |
+| Key | Role |
+|-----|------|
+| **Primary** | Other hosts and daily Git — **not** for this VPS and **not** in **`GITOPS_DEPLOY_KEY`** |
+| **hm-gitops** | **`ssh`**, **`./hm-playbook.sh`**, **`act`**, and **GitHub Actions** for this project — one keypair, one pubkey line on the server |
 
-The VPS can have **both** public keys in **`~/.ssh/authorized_keys`** (two lines): one for you, one for CI.
+Generate the project key and install the public half on the VPS:
 
-**Laptop SSH config** (recommended so Ansible picks the right key without `--private-key`):
+```bash
+./scripts/new-hm-gitops-key.sh
+# then add ~/.ssh/hm-gitops.pub to authorized_keys on the server
+```
+
+**SSH config** (so Ansible uses hm-gitops without `--private-key`):
 
 ```sshconfig
 Host hackamonth.io
-  User sidosera
-  IdentityFile ~/.ssh/hackamonth
+  User YOUR_UNIX_LOGIN
+  IdentityFile ~/.ssh/hm-gitops
   IdentitiesOnly yes
 ```
 
-Adjust **`Host`** / **`User`** to match **`secrets.deploy.ansible_host`** and **`secrets.deploy.ssh_user`**. Generate the Hackamonth key once:
-
-```bash
-ssh-keygen -t ed25519 -f ~/.ssh/hackamonth -C "hackamonth-vps" -N ""
-ssh-copy-id -i ~/.ssh/hackamonth.pub -o IdentityFile=~/.ssh/hackamonth YOUR_USER@YOUR_HOST
-```
+Match **`Host`** / **`User`** to **`secrets.deploy.ansible_host`** and **`secrets.deploy.ssh_user`**. If you already use **`~/.ssh/hm-gitops-deploy`** from an older setup, that path still works; **`./scripts/run-act-gitops.sh`** will pick it up when **`~/.ssh/hm-gitops`** is absent.
 
 ## Clone
 
@@ -78,7 +77,7 @@ Play 1 **`include_vars`** + **`add_host`** group **`hm`** with **`{{ secrets.dep
 ./hm-playbook.sh -e hm_action=teardown -e hm_teardown_uninstall_k3s=true  # also k3s-uninstall.sh
 ```
 
-From the laptop, use the **Hackamonth key** (SSH config above) or **`./hm-playbook.sh --private-key ~/.ssh/hackamonth …`**. See **SSH keys (keep them separate)**. If sudo is not passwordless:
+Use the **hm-gitops** key (SSH config above) or **`./hm-playbook.sh --private-key ~/.ssh/hm-gitops …`**. If sudo is not passwordless:
 
 ```bash
 ./hm-playbook.sh --ask-become-pass
@@ -93,21 +92,19 @@ Workflow **[`.github/workflows/gitops-apply.yml`](.github/workflows/gitops-apply
 **Secrets (repository):**
 
 - **`GITOPS_LOCAL_ENV_B64`** — `base64` of **`local-env.yaml`** (single line, no newlines).
-- **`GITOPS_DEPLOY_KEY`** — **only** a [dedicated deploy key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys) private key, never your personal **`~/.ssh/id_*`**. Generate and wire it with:
+- **`GITOPS_DEPLOY_KEY`** — the **same** **`~/.ssh/hm-gitops`** private key you use for **`hm-playbook`** (never your primary **`id_*`**). After **`./scripts/new-hm-gitops-key.sh`**:
 
 ```bash
-./scripts/new-gitops-deploy-key.sh
-# add the printed .pub line to the VPS user's ~/.ssh/authorized_keys
-gh secret set GITOPS_DEPLOY_KEY < ~/.ssh/hm-gitops-deploy
+gh secret set GITOPS_DEPLOY_KEY < ~/.ssh/hm-gitops
 gh secret set GITOPS_LOCAL_ENV_B64 --body "$(base64 < local-env.yaml | tr -d '\n')"
 ```
 
-Optional: **`GITOPS_DEPLOY_KEY_B64`** (same key, base64 one line) — used by **`act`** locally; the workflow prefers **`GITOPS_DEPLOY_KEY_B64`** over **`GITOPS_DEPLOY_KEY`**. Legacy secrets **`GITOPS_SSH_KEY`** / **`GITOPS_SSH_KEY_B64`** are still accepted for migration; delete them after switching.
+Optional: **`GITOPS_DEPLOY_KEY_B64`** — same key as a single base64 line; **`act`** supplies this automatically. Legacy **`GITOPS_SSH_KEY`*** still works for migration.
 
-To emulate that job locally with **[act](https://github.com/nektos/act)** (Docker must be running):
+**[act](https://github.com/nektos/act)** (Docker running) — uses **`~/.ssh/hm-gitops`** by default (or **`GITOPS_DEPLOY_KEY_FILE`**):
 
 ```bash
-GITOPS_DEPLOY_KEY_FILE="$HOME/.ssh/hm-gitops-deploy" ./scripts/run-act-gitops.sh
+./scripts/run-act-gitops.sh
 ```
 
 Use **`--dryrun`** to validate the workflow only. The container needs outbound SSH to **`secrets.deploy.ansible_host`**.

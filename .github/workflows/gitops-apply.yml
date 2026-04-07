@@ -1,12 +1,12 @@
 # Run Ansible in update mode against your VPS
 # Repository secrets:
 #   GITOPS_LOCAL_ENV_B64       base64(local-env.yaml) — must include secrets.deploy.ssh_user
-#   GITOPS_DEPLOY_KEY          dedicated deploy private key only (see scripts/new-gitops-deploy-key.sh)
+#   GITOPS_DEPLOY_KEY          same dedicated hm-gitops private key you use locally (see scripts/new-hm-gitops-key.sh)
 #   GITOPS_DEPLOY_KEY_B64      optional single-line base64 of that key (for `act` locally)
 #   GITOPS_BECOME_PASSWORD     optional sudo password if the VPS user is not NOPASSWD
 #
-# Do not store your personal ~/.ssh/id_* key in GitHub. Legacy GITOPS_SSH_KEY / GITOPS_SSH_KEY_B64
-# are still read if set, for migration only.
+# Do not use your primary ~/.ssh/id_* here — keep a separate key for this VPS/repo. Legacy GITOPS_SSH_KEY*
+# still accepted for migration.
 #
 # For host key verification, add a workflow step or set ansible host_key_checking in ansible.cfg.
 name: GitOps apply
