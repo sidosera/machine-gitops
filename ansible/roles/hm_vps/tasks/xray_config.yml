@@ -31,8 +31,8 @@
     src: "{{ hm_xray_template_controller_path }}"
     dest: "{{ hm_config_dir }}/xray/config.rendered.yaml"
     mode: "0600"
-    vars:
-      secrets: "{{ hm_local_env.secrets }}"
+  vars:
+    secrets: "{{ hm_local_env.secrets }}"
   no_log: true
 
 - name: Read rendered Xray YAML on host
@@ -55,7 +55,7 @@
     state: absent
 
 - name: Sync Xray config into Kubernetes Secret
-  ansible.builtin.command: >-
+  ansible.builtin.shell: >
     kubectl create secret generic {{ hm_k8s_xray_secret_name }}
     --namespace={{ hm_k8s_namespace }}
     --from-file=config.json={{ hm_config_dir }}/xray/config.json
