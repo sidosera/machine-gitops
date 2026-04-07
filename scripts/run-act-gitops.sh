@@ -3,9 +3,8 @@
 # Uses the same dedicated hm-gitops SSH key as GitHub Actions (not your primary ~/.ssh/id_*).
 #
 #   ./scripts/run-act-gitops.sh
-#   GITOPS_DEPLOY_KEY_FILE=~/.ssh/other ./scripts/run-act-gitops.sh --dryrun
 #
-# Default key: ~/.ssh/hm-gitops (override with GITOPS_DEPLOY_KEY_FILE).
+# Requires ~/.ssh/hm-gitops (same key as GITOPS_DEPLOY_KEY / GITOPS_DEPLOY_KEY_B64 on GitHub).
 #
 # Optional: GITOPS_BECOME_PASSWORD (or NOPASSWD on the VPS).
 
@@ -13,9 +12,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-KEY_FILE="${GITOPS_DEPLOY_KEY_FILE:-$HOME/.ssh/hm-gitops}"
+KEY_FILE="$HOME/.ssh/hm-gitops"
 if [[ ! -f "$KEY_FILE" ]]; then
-  echo "Missing hm-gitops SSH private key: $KEY_FILE" >&2
+  echo "Missing $KEY_FILE" >&2
   echo "Create one (separate from your primary ~/.ssh/id_*): ./scripts/new-hm-gitops-key.sh" >&2
   exit 1
 fi

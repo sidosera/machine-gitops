@@ -20,7 +20,7 @@
     that:
       - hm_xray_has_vless_client | bool
     fail_msg: >-
-      Set secrets.xray.vless_clients (list of UUID strings) or legacy secrets.xray.vless_client_id — see local-env.example.yaml
+      Set secrets.xray.vless_clients (list of UUID strings) or secrets.xray.vless_client_id (single UUID) — see local-env.example.yaml
   vars:
     hm_xray_has_vless_client: >-
       {{ (hm_local_env.secrets.xray.vless_clients | default([]) | length > 0)

@@ -99,9 +99,9 @@ gh secret set GITOPS_DEPLOY_KEY < ~/.ssh/hm-gitops
 gh secret set GITOPS_LOCAL_ENV_B64 --body "$(base64 < local-env.yaml | tr -d '\n')"
 ```
 
-Optional: **`GITOPS_DEPLOY_KEY_B64`** — same key as a single base64 line; **`act`** supplies this automatically. Legacy **`GITOPS_SSH_KEY`*** still works for migration.
+Set **`GITOPS_DEPLOY_KEY`** with **`gh secret set`** (multiline PEM). **`./scripts/run-act-gitops.sh`** sends **`GITOPS_DEPLOY_KEY_B64`** for you from **`~/.ssh/hm-gitops`**; you do not need **`GITOPS_DEPLOY_KEY_B64`** in the repo unless you set it yourself.
 
-**[act](https://github.com/nektos/act)** (Docker running) — uses **`~/.ssh/hm-gitops`** by default (or **`GITOPS_DEPLOY_KEY_FILE`**):
+**[act](https://github.com/nektos/act)** (Docker running) — reads **`~/.ssh/hm-gitops`** (same key as **`GITOPS_DEPLOY_KEY`**):
 
 ```bash
 ./scripts/run-act-gitops.sh

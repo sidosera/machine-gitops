@@ -29,6 +29,3 @@ echo "2) Use this key from your laptop (SSH config IdentityFile, or --private-ke
 echo ""
 echo "3) Same private key in GitHub (not your primary id_*):"
 echo "   gh secret set GITOPS_DEPLOY_KEY < $KEY"
-echo ""
-echo "4) Remove legacy secret if present:"
-echo "   gh secret delete GITOPS_SSH_KEY 2>/dev/null || true"

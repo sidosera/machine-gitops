@@ -5,8 +5,7 @@
 #   GITOPS_DEPLOY_KEY_B64      optional single-line base64 of that key (for `act` locally)
 #   GITOPS_BECOME_PASSWORD     optional sudo password if the VPS user is not NOPASSWD
 #
-# Do not use your primary ~/.ssh/id_* here — keep a separate key for this VPS/repo. Legacy GITOPS_SSH_KEY*
-# still accepted for migration.
+# Use a dedicated hm-gitops key — not your primary ~/.ssh/id_*.
 #
 # For host key verification, add a workflow step or set ansible host_key_checking in ansible.cfg.
 name: GitOps apply
@@ -39,12 +38,10 @@ jobs:
           fi
           echo "$GITOPS_LOCAL_ENV_B64" | base64 -d > local-env.yaml
 
-      - name: Install deploy SSH key
+      - name: Install hm-gitops SSH key
         env:
           GITOPS_DEPLOY_KEY_B64: ${{ secrets.GITOPS_DEPLOY_KEY_B64 }}
           GITOPS_DEPLOY_KEY: ${{ secrets.GITOPS_DEPLOY_KEY }}
-          GITOPS_SSH_KEY_B64: ${{ secrets.GITOPS_SSH_KEY_B64 }}
-          GITOPS_SSH_KEY: ${{ secrets.GITOPS_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
@@ -52,13 +49,9 @@ jobs:
             echo "${GITOPS_DEPLOY_KEY_B64}" | base64 -d > ~/.ssh/gitops
           elif [ -n "${GITOPS_DEPLOY_KEY}" ]; then
             printf '%s\n' "${GITOPS_DEPLOY_KEY}" > ~/.ssh/gitops
-          elif [ -n "${GITOPS_SSH_KEY_B64}" ]; then
-            echo "${GITOPS_SSH_KEY_B64}" | base64 -d > ~/.ssh/gitops
-          elif [ -n "${GITOPS_SSH_KEY}" ]; then
-            printf '%s\n' "${GITOPS_SSH_KEY}" > ~/.ssh/gitops
           fi
           if [ ! -s ~/.ssh/gitops ]; then
-            echo "Set GITOPS_DEPLOY_KEY or GITOPS_DEPLOY_KEY_B64 (dedicated deploy key; not your personal SSH key)." >&2
+            echo "Set repository secrets GITOPS_DEPLOY_KEY (multiline) and/or GITOPS_DEPLOY_KEY_B64 (base64)." >&2
             exit 1
           fi
           chmod 600 ~/.ssh/gitops
