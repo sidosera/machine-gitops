@@ -1,0 +1,4 @@
+.claude
+.ruff_cache
+local-env.yaml
+.secrets

@@ -1,0 +1,38 @@
+log:
+  loglevel: warning
+
+inbounds:
+  - listen: "0.0.0.0"
+    port: 10086
+    protocol: vless
+    settings:
+      clients:
+{% if secrets.xray.vless_clients is defined and secrets.xray.vless_clients | length > 0 %}
+{% for c in secrets.xray.vless_clients %}
+{% if c is mapping %}
+        - id: "{{ c.id | trim }}"
+          flow: "{{ c.flow | default('') }}"
+{% else %}
+        - id: "{{ c | trim }}"
+          flow: ""
+{% endif %}
+{% endfor %}
+{% else %}
+        - id: "{{ secrets.xray.vless_client_id }}"
+          flow: ""
+{% endif %}
+      decryption: none
+    streamSettings:
+      network: ws
+      wsSettings:
+        path: /xray-ws
+    sniffing:
+      enabled: true
+      destOverride:
+        - http
+        - tls
+        - quic
+
+outbounds:
+  - protocol: freedom
+    tag: direct

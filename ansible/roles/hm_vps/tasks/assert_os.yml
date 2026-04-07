@@ -1,0 +1,6 @@
+---
+- name: Require Ubuntu or Debian
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution in ['Ubuntu', 'Debian']
+    fail_msg: "This role supports only Ubuntu or Debian."

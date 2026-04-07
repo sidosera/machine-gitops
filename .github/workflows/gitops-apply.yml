@@ -1,0 +1,70 @@
+# Run Ansible in update mode against your VPS
+# Repository secrets:
+#   GITOPS_LOCAL_ENV_B64    <base64-encoded local-env.yaml> (must include secrets.deploy.ssh_user)
+#   GITOPS_SSH_KEY          <VPS private key PEM> (multiline; use in GitHub Actions UI)
+#   GITOPS_SSH_KEY_B64      optional: base64(single-line) of the same key — easier for `act` locally
+#   GITOPS_BECOME_PASSWORD  optional: sudo/become password if the VPS user is not NOPASSWD
+#
+# For host key verification, add a workflow step or set ansible host_key_checking in ansible.cfg.
+name: GitOps apply
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: gitops-apply
+  cancel-in-progress: true
+
+jobs:
+  ansible-update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: pip install --user ansible
+
+      - name: Write local-env.yaml from secret
+        env:
+          GITOPS_LOCAL_ENV_B64: ${{ secrets.GITOPS_LOCAL_ENV_B64 }}
+        run: |
+          if [ -z "${GITOPS_LOCAL_ENV_B64}" ]; then
+            echo "local-env.yaml not set" >&2
+            exit 1
+          fi
+          echo "$GITOPS_LOCAL_ENV_B64" | base64 -d > local-env.yaml
+
+      - name: Install SSH key
+        env:
+          GITOPS_SSH_KEY_B64: ${{ secrets.GITOPS_SSH_KEY_B64 }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          if [ -n "${GITOPS_SSH_KEY_B64}" ]; then
+            echo "${GITOPS_SSH_KEY_B64}" | base64 -d > ~/.ssh/gitops
+          else
+            echo "${{ secrets.GITOPS_SSH_KEY }}" > ~/.ssh/gitops
+          fi
+          if [ ! -s ~/.ssh/gitops ]; then
+            echo "Missing or empty GITOPS_SSH_KEY / GITOPS_SSH_KEY_B64" >&2
+            exit 1
+          fi
+          chmod 600 ~/.ssh/gitops
+
+      - name: Run Ansible update
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "false"
+          GITOPS_BECOME_PASSWORD: ${{ secrets.GITOPS_BECOME_PASSWORD }}
+        run: |
+          export PATH="$(python3 -m site --user-base)/bin:$PATH"
+          BP="$HOME/.gitops_become_pass"
+          if [ -n "${GITOPS_BECOME_PASSWORD}" ]; then
+            printf '%s\n' "${GITOPS_BECOME_PASSWORD}" >"$BP"
+            chmod 600 "$BP"
+            ./hm-playbook.sh -e hm_action=update --private-key ~/.ssh/gitops --become-password-file "$BP"
+            rm -f "$BP"
+          else
+            ./hm-playbook.sh -e hm_action=update --private-key ~/.ssh/gitops
+          fi

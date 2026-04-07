@@ -1,0 +1,17 @@
+---
+# Run from ansible/: ansible-lint -c .ansible-lint playbook.yml roles inventory controller_layout.yml
+profile: basic
+skip_list:
+  # Role intentionally uses hm_* (not hm_vps_*) for shorter host facts / kubectl env.
+  - var-naming[no-role-prefix]
+  # Controller pre_tasks use run_once deliberately.
+  - run-once[task]
+  # Short include_tasks entries without redundant names.
+  - name[missing]
+  # kubectl / shell idempotency patterns use changed_when where needed; not uniform.
+  - no-changed-when
+  - name[casing]
+  # git submodule wiring; git module does not cover this flow cleanly.
+  - command-instead-of-module
+  # Templates (e.g. hm-ci-secret) use post-slurp facts; static jinja rule mis-parses filter args.
+  - jinja

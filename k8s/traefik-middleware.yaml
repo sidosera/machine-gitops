@@ -1,0 +1,10 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: security-headers
+spec:
+  headers:
+    customResponseHeaders:
+      X-Frame-Options: SAMEORIGIN
+      X-Content-Type-Options: nosniff
+      Referrer-Policy: strict-origin-when-cross-origin

@@ -1,0 +1,10 @@
+# Copy to local-env.yaml (gitignored). Do not commit.
+
+secrets:
+  deploy:
+    ansible_host: "CHANGE_ME_VPS_HOST_OR_IP"
+    ssh_user: "CHANGE_ME_UNIX_LOGIN"
+    hm_git_repo: "https://github.com/YOU/hackamonth-gitops.git"
+  xray:
+    vless_clients:
+      - "REPLACE-WITH-UUID"
