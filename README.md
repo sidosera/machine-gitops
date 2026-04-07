@@ -38,7 +38,7 @@ Host hackamonth.io
   IdentitiesOnly yes
 ```
 
-Match **`Host`** / **`User`** to **`secrets.deploy.ansible_host`** and **`secrets.deploy.ssh_user`**. If you already use **`~/.ssh/hm-gitops-deploy`** from an older setup, that path still works; **`./scripts/run-act-gitops.sh`** will pick it up when **`~/.ssh/hm-gitops`** is absent.
+Match **`Host`** / **`User`** to **`secrets.deploy.ansible_host`** and **`secrets.deploy.ssh_user`**.
 
 ## Clone
 

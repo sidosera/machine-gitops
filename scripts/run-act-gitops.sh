@@ -5,7 +5,7 @@
 #   ./scripts/run-act-gitops.sh
 #   GITOPS_DEPLOY_KEY_FILE=~/.ssh/other ./scripts/run-act-gitops.sh --dryrun
 #
-# Default key path: ~/.ssh/hm-gitops, or ~/.ssh/hm-gitops-deploy if you created an older key there.
+# Default key: ~/.ssh/hm-gitops (override with GITOPS_DEPLOY_KEY_FILE).
 #
 # Optional: GITOPS_BECOME_PASSWORD (or NOPASSWD on the VPS).
 
@@ -13,23 +13,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-resolve_key_file() {
-  if [[ -n "${GITOPS_DEPLOY_KEY_FILE:-}" ]]; then
-    printf '%s' "$GITOPS_DEPLOY_KEY_FILE"
-    return
-  fi
-  if [[ -f "$HOME/.ssh/hm-gitops" ]]; then
-    printf '%s' "$HOME/.ssh/hm-gitops"
-    return
-  fi
-  if [[ -f "$HOME/.ssh/hm-gitops-deploy" ]]; then
-    printf '%s' "$HOME/.ssh/hm-gitops-deploy"
-    return
-  fi
-  printf '%s' "$HOME/.ssh/hm-gitops"
-}
-
-KEY_FILE="$(resolve_key_file)"
+KEY_FILE="${GITOPS_DEPLOY_KEY_FILE:-$HOME/.ssh/hm-gitops}"
 if [[ ! -f "$KEY_FILE" ]]; then
   echo "Missing hm-gitops SSH private key: $KEY_FILE" >&2
   echo "Create one (separate from your primary ~/.ssh/id_*): ./scripts/new-hm-gitops-key.sh" >&2
